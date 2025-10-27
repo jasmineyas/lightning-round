@@ -49,7 +49,7 @@ On your phone (same WiFi): http://192.168.1.123:8001
 **On your computer:** Use `http://localhost:8001`
 **On your phone:** Use the IP address shown (make sure you're on the same WiFi)
 
-## 📱 Making Changes
+## Making Changes
 
 **After editing `config.json`:**
 
@@ -59,7 +59,7 @@ On your phone (same WiFi): http://192.168.1.123:8001
 
 The app loads the config file when it starts, so you need to restart the server to see changes.
 
-## ⚙️ Configuration
+## Configuration
 
 ### App Title
 
@@ -70,8 +70,6 @@ Customize the app title shown on the home screen:
   "appTitle": "⚡ Lightning Round"
 }
 ```
-
-You can use any text or emoji!
 
 ### Theme Customization
 
@@ -92,7 +90,7 @@ Edit the `theme` section in `config.json` to customize colors, fonts, and effect
 }
 ```
 
-Use any Tailwind CSS color names (e.g., `blue-500`, `red-600`, `green-400`).
+Use any [Tailwind CSS](https://tailwindcss.com/docs/colors) color names (e.g., `blue-500`, `red-600`, `green-400`).
 
 ### Adding Your Own Decks
 
@@ -113,7 +111,7 @@ Add decks in the `decks` array:
 }
 ```
 
-## 🎮 How to Play
+## How to Play
 
 1. **Select a deck** from the home screen
 2. **Set timer** duration (default 30 seconds)
