@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <title>⚡ Lightning Round</title>
+
+  <!-- Inter Font -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- React and ReactDOM -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+
+  <!-- Babel Standalone for JSX -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      overflow-x: hidden;
+    }
+
+    /* Landscape optimizations */
+    @media (orientation: landscape) and (max-height: 600px) {
+      .lg\:w-64 {
+        width: 200px !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <!-- Setup React hooks globally -->
+  <script>
+    // Make React hooks available globally
+    const { useState, useEffect, useRef } = React;
+  </script>
+
+  <!-- Lucide Icons and Main App Component -->
+  <script type="text/babel">
+    // Minimal Lucide icon components
+    const ChevronLeft = ({ className }) => (
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+        <path d="m15 18-6-6 6-6"/>
+      </svg>
+    );
+
+    const ChevronRight = ({ className }) => (
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+        <path d="m9 18 6-6-6-6"/>
+      </svg>
+    );
+
+    const ChevronUp = ({ className }) => (
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+        <path d="m18 15-6-6-6 6"/>
+      </svg>
+    );
+
+    const Play = ({ className }) => (
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+        <polygon points="6 3 20 12 6 21 6 3"/>
+      </svg>
+    );
+
+    const RotateCcw = ({ className }) => (
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+        <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+        <path d="M3 3v5h5"/>
+      </svg>
+    );
+
+    const Timer = ({ className }) => (
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+        <line x1="10" x2="14" y1="2" y2="2"/>
+        <line x1="12" x2="15" y1="14" y2="11"/>
+        <circle cx="12" cy="14" r="8"/>
+      </svg>
+    );
+
+    // Lightning Round Component
+    function LightningRound() {
+      const [screen, setScreen] = useState("deck-select");
+      const [decks, setDecks] = useState([]);
+      const [appTitle, setAppTitle] = useState("⚡ Lightning Round");
+      const [theme, setTheme] = useState(null);
+      const [loading, setLoading] = useState(true);
+      const [error, setError] = useState(null);
+      const [selectedDeck, setSelectedDeck] = useState(null);
+      const [timerDuration, setTimerDuration] = useState(30);
+      const [currentCardIndex, setCurrentCardIndex] = useState(0);
+      const [timeRemaining, setTimeRemaining] = useState(30);
+      const [score, setScore] = useState({ right: 0, wrong: 0, void: 0 });
+      const [isTimerRunning, setIsTimerRunning] = useState(false);
+      const [touchStart, setTouchStart] = useState(null);
+      const [touchEnd, setTouchEnd] = useState(null);
+      const [touchStartY, setTouchStartY] = useState(null);
+      const [touchEndY, setTouchEndY] = useState(null);
+      const [swipeDirection, setSwipeDirection] = useState(null);
+
+      const timerRef = useRef(null);
+
+      // Load config on component mount
+      useEffect(() => {
+        async function loadConfig() {
+          try {
+            setLoading(true);
+            let response = await fetch("config.json");
+
+            if (!response.ok) {
+              response = await fetch("config.example.json");
+              if (!response.ok) {
+                throw new Error("No configuration file found");
+              }
+              console.log("Loaded example configuration");
+            } else {
+              console.log("Loaded custom configuration");
+            }
+
+            const config = await response.json();
+            if (Array.isArray(config)) {
+              setDecks(config);
+              setAppTitle("⚡ Lightning Round");
+              setTheme({
+                fontFamily: "Inter, system-ui, -apple-system, sans-serif",
+                colors: {
+                  primary: { from: "purple-600", to: "blue-600" },
+                  accent: "purple-600",
+                  correct: "green-500",
+                  wrong: "red-500",
+                  void: "gray-400",
+                  text: {
+                    primary: "gray-800",
+                    secondary: "gray-600",
+                    inverse: "white",
+                  },
+                  background: { card: "white", overlay: "white/20" },
+                },
+                effects: {
+                  cardShadow: "shadow-2xl",
+                  cardRounding: "rounded-2xl",
+                  buttonRounding: "rounded-xl",
+                  glassEffect: "backdrop-blur-sm",
+                },
+              });
+            } else {
+              setDecks(config.decks || []);
+              setAppTitle(config.appTitle || "⚡ Lightning Round");
+              setTheme(config.theme || {});
+            }
+            setLoading(false);
+          } catch (err) {
+            setError("Failed to load configuration: " + err.message);
+            setLoading(false);
+          }
+        }
+
+        loadConfig();
+      }, []);
+
+      // Timer logic
+      useEffect(() => {
+        if (isTimerRunning && timeRemaining > 0) {
+          timerRef.current = setInterval(() => {
+            setTimeRemaining((prev) => {
+              if (prev <= 1) {
+                setIsTimerRunning(false);
+                setScreen("results");
+                return 0;
+              }
+              return prev - 1;
+            });
+          }, 1000);
+        }
+        return () => clearInterval(timerRef.current);
+      }, [isTimerRunning, timeRemaining]);
+
+      // Keyboard controls
+      useEffect(() => {
+        const handleKeyDown = (e) => {
+          if (screen === "playing") {
+            if (e.key === "ArrowRight") {
+              setSwipeDirection("right");
+              setTimeout(() => handleAnswer("right"), 300);
+            } else if (e.key === "ArrowLeft") {
+              setSwipeDirection("left");
+              setTimeout(() => handleAnswer("wrong"), 300);
+            } else if (e.key === "ArrowUp") {
+              e.preventDefault();
+              setSwipeDirection("up");
+              setTimeout(() => handleAnswer("void"), 300);
+            }
+          }
+        };
+        window.addEventListener("keydown", handleKeyDown);
+        return () => window.removeEventListener("keydown", handleKeyDown);
+      }, [screen, currentCardIndex]);
+
+      const minSwipeDistance = 50;
+
+      const onTouchStart = (e) => {
+        setTouchEnd(null);
+        setTouchEndY(null);
+        setTouchStart(e.targetTouches[0].clientX);
+        setTouchStartY(e.targetTouches[0].clientY);
+      };
+
+      const onTouchMove = (e) => {
+        setTouchEnd(e.targetTouches[0].clientX);
+        setTouchEndY(e.targetTouches[0].clientY);
+      };
+
+      const onTouchEnd = () => {
+        if (!touchStart || !touchEnd || !touchStartY || !touchEndY) return;
+
+        const distanceX = touchStart - touchEnd;
+        const distanceY = touchStartY - touchEndY;
+
+        const isLeftSwipe = distanceX > minSwipeDistance && Math.abs(distanceY) < minSwipeDistance;
+        const isRightSwipe = distanceX < -minSwipeDistance && Math.abs(distanceY) < minSwipeDistance;
+        const isUpSwipe = distanceY > minSwipeDistance && Math.abs(distanceX) < minSwipeDistance;
+
+        if (isUpSwipe) {
+          setSwipeDirection("up");
+          setTimeout(() => handleAnswer("void"), 300);
+        } else if (isLeftSwipe) {
+          setSwipeDirection("left");
+          setTimeout(() => handleAnswer("wrong"), 300);
+        } else if (isRightSwipe) {
+          setSwipeDirection("right");
+          setTimeout(() => handleAnswer("right"), 300);
+        }
+      };
+
+      const handleAnswer = (type) => {
+        if (screen !== "playing" || !selectedDeck) return;
+
+        setScore((prev) => ({
+          ...prev,
+          [type]: prev[type] + 1,
+        }));
+
+        if (currentCardIndex < selectedDeck.cards.length - 1) {
+          setCurrentCardIndex((prev) => prev + 1);
+          setSwipeDirection(null);
+        } else {
+          setIsTimerRunning(false);
+          setScreen("results");
+        }
+      };
+
+      const startGame = () => {
+        setCurrentCardIndex(0);
+        setScore({ right: 0, wrong: 0, void: 0 });
+        setTimeRemaining(timerDuration);
+        setIsTimerRunning(true);
+        setSwipeDirection(null);
+        setScreen("playing");
+      };
+
+      const selectDeck = (deck) => {
+        setSelectedDeck(deck);
+        setScreen("timer-setup");
+      };
+
+      const finishGame = () => {
+        setDecks((prev) =>
+          prev.map((d) =>
+            d.id === selectedDeck.id
+              ? { ...d, lastScore: score, played: true }
+              : d
+          )
+        );
+        setSelectedDeck(null);
+        setScreen("deck-select");
+      };
+
+      const resetAndReturn = () => {
+        setSelectedDeck(null);
+        setScreen("deck-select");
+      };
+
+      if (loading || !theme) {
+        return (
+          <div className="min-h-screen bg-gradient-to-br from-purple-600 to-blue-600 p-4 flex items-center justify-center">
+            <div
+              className="text-white text-2xl"
+              style={{ fontFamily: "Inter, system-ui, -apple-system, sans-serif" }}
+            >
+              Loading decks...
+            </div>
+          </div>
+        );
+      }
+
+      if (error) {
+        return (
+          <div
+            className={`min-h-screen bg-gradient-to-br from-${theme.colors.primary.from} to-${theme.colors.primary.to} p-4 flex items-center justify-center`}
+            style={{ fontFamily: theme.fontFamily }}
+          >
+            <div
+              className={`bg-${theme.colors.background.card} ${theme.effects.cardRounding} p-8 max-w-md`}
+            >
+              <div className={`text-${theme.colors.wrong} text-xl font-bold mb-2`}>
+                Error
+              </div>
+              <div className={`text-${theme.colors.text.secondary}`}>{error}</div>
+            </div>
+          </div>
+        );
+      }
+
+      if (screen === "deck-select") {
+        return (
+          <div
+            className={`min-h-screen bg-gradient-to-br from-${theme.colors.primary.from} to-${theme.colors.primary.to} p-4 flex flex-col`}
+            style={{ fontFamily: theme.fontFamily }}
+          >
+            <div className="max-w-4xl mx-auto w-full flex-1 flex flex-col">
+              <h1
+                className={`text-4xl md:text-5xl font-bold text-${theme.colors.text.inverse} text-center mb-8 mt-8`}
+              >
+                {appTitle}
+              </h1>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+                {decks.map((deck) => (
+                  <button
+                    key={deck.id}
+                    onClick={() => selectDeck(deck)}
+                    className={`p-6 ${
+                      theme.effects.buttonRounding
+                    } transition-all transform hover:scale-105 ${
+                      deck.played
+                        ? `bg-${theme.colors.background.card}/30 opacity-60`
+                        : `bg-${theme.colors.background.card} hover:bg-${theme.colors.background.card}/90`
+                    }`}
+                  >
+                    <div className="text-left">
+                      <h3
+                        className={`text-xl font-bold text-${theme.colors.text.primary} mb-2`}
+                      >
+                        {deck.name}
+                      </h3>
+                      <p
+                        className={`text-${theme.colors.text.secondary} text-sm mb-3`}
+                      >
+                        {deck.cards.length} cards
+                      </p>
+                      {deck.lastScore && (
+                        <div className="flex gap-2 text-xs font-medium">
+                          <span className={`text-${theme.colors.correct}`}>
+                            ✓ {deck.lastScore.right}
+                          </span>
+                          <span className={`text-${theme.colors.wrong}`}>
+                            ✗ {deck.lastScore.wrong}
+                          </span>
+                          <span className={`text-${theme.colors.void}`}>
+                            ○ {deck.lastScore.void}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div
+              className={`text-center text-${theme.colors.text.inverse}/80 text-sm pb-4`}
+            >
+              <p>Select a deck to begin</p>
+            </div>
+          </div>
+        );
+      }
+
+      if (screen === "timer-setup") {
+        return (
+          <div
+            className={`min-h-screen bg-gradient-to-br from-${theme.colors.primary.from} to-${theme.colors.primary.to} p-4 flex items-center justify-center`}
+            style={{ fontFamily: theme.fontFamily }}
+          >
+            <div
+              className={`bg-${theme.colors.background.card} ${theme.effects.cardRounding} p-8 max-w-md w-full ${theme.effects.cardShadow}`}
+            >
+              <div className="flex items-center justify-center mb-6">
+                <Timer className={`w-12 h-12 text-${theme.colors.accent}`} />
+              </div>
+
+              <h2
+                className={`text-3xl font-bold text-${theme.colors.text.primary} text-center mb-2`}
+              >
+                {selectedDeck.name}
+              </h2>
+
+              <p className={`text-${theme.colors.text.secondary} text-center mb-8`}>
+                {selectedDeck.cards.length} cards in this deck
+              </p>
+
+              <div className="mb-8">
+                <label
+                  className={`block text-${theme.colors.text.primary} font-medium mb-3 text-center`}
+                >
+                  Timer Duration
+                </label>
+                <div className="flex items-center justify-center gap-4">
+                  <button
+                    onClick={() =>
+                      setTimerDuration(Math.max(10, timerDuration - 10))
+                    }
+                    className={`w-12 h-12 rounded-full bg-${theme.colors.void}/30 hover:bg-${theme.colors.void}/50 flex items-center justify-center font-bold text-xl`}
+                  >
+                    -
+                  </button>
+                  <div
+                    className={`text-5xl font-bold text-${theme.colors.accent} min-w-[120px] text-center`}
+                  >
+                    {timerDuration}s
+                  </div>
+                  <button
+                    onClick={() => setTimerDuration(timerDuration + 10)}
+                    className={`w-12 h-12 rounded-full bg-${theme.colors.void}/30 hover:bg-${theme.colors.void}/50 flex items-center justify-center font-bold text-xl`}
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+
+              <button
+                onClick={startGame}
+                className={`w-full bg-${theme.colors.accent} hover:bg-${theme.colors.accent}/90 text-${theme.colors.text.inverse} font-bold py-4 px-6 ${theme.effects.buttonRounding} flex items-center justify-center gap-2 transition-colors mb-3`}
+              >
+                <Play className="w-5 h-5" />
+                Start Round
+              </button>
+
+              <button
+                onClick={resetAndReturn}
+                className={`w-full bg-${theme.colors.void}/30 hover:bg-${theme.colors.void}/50 text-${theme.colors.text.primary} font-medium py-3 px-6 ${theme.effects.buttonRounding} transition-colors`}
+              >
+                Back to Decks
+              </button>
+            </div>
+          </div>
+        );
+      }
+
+      if (screen === "playing") {
+        const currentCard = selectedDeck.cards[currentCardIndex];
+        const progress =
+          ((currentCardIndex + 1) / selectedDeck.cards.length) * 100;
+
+        return (
+          <div
+            className={`min-h-screen bg-gradient-to-br from-${theme.colors.primary.from} to-${theme.colors.primary.to} p-4 flex flex-col`}
+            style={{ fontFamily: theme.fontFamily }}
+          >
+            <div className="max-w-6xl mx-auto w-full flex-1 flex flex-col lg:flex-row gap-4">
+              {/* Left sidebar in landscape - Header & Score */}
+              <div className="lg:w-64 flex flex-col gap-4">
+                <div
+                  className={`bg-${theme.colors.background.overlay} ${theme.effects.glassEffect} rounded-xl p-4`}
+                >
+                  <div className="flex lg:flex-col justify-between items-center lg:items-start mb-2 lg:mb-4">
+                    <div className={`text-${theme.colors.text.inverse} font-medium text-sm lg:text-base`}>
+                      Card {currentCardIndex + 1}/{selectedDeck.cards.length}
+                    </div>
+                    <div
+                      className={`text-3xl lg:text-5xl font-bold ${
+                        timeRemaining <= 10
+                          ? `text-${theme.colors.wrong}/70 animate-pulse`
+                          : `text-${theme.colors.text.inverse}`
+                      }`}
+                    >
+                      {timeRemaining}s
+                    </div>
+                  </div>
+                  <div
+                    className={`w-full bg-${theme.colors.text.inverse}/30 rounded-full h-2`}
+                  >
+                    <div
+                      className={`bg-${theme.colors.text.inverse} h-2 rounded-full transition-all duration-300`}
+                      style={{ width: `${progress}%` }}
+                    />
+                  </div>
+                </div>
+
+                <div className="flex lg:flex-col gap-2">
+                  <div
+                    className={`flex-1 bg-${theme.colors.correct} text-${theme.colors.text.inverse} rounded-lg p-3 text-center font-bold`}
+                  >
+                    ✓ {score.right}
+                  </div>
+                  <div
+                    className={`flex-1 bg-${theme.colors.wrong} text-${theme.colors.text.inverse} rounded-lg p-3 text-center font-bold`}
+                  >
+                    ✗ {score.wrong}
+                  </div>
+                  <div
+                    className={`flex-1 bg-${theme.colors.void} text-${theme.colors.text.inverse} rounded-lg p-3 text-center font-bold`}
+                  >
+                    ○ {score.void}
+                  </div>
+                </div>
+              </div>
+
+              {/* Main card area */}
+              <div className="flex-1 flex flex-col">
+
+              <div
+                className={`flex-1 bg-${theme.colors.background.card} ${theme.effects.cardRounding} ${theme.effects.cardShadow} p-6 lg:p-8 flex flex-col justify-center touch-none transition-all duration-300 ${
+                  swipeDirection === "left" ? "opacity-0 -translate-x-full rotate-12" :
+                  swipeDirection === "right" ? "opacity-0 translate-x-full -rotate-12" :
+                  swipeDirection === "up" ? "opacity-0 -translate-y-full scale-75" :
+                  ""
+                }`}
+                style={{
+                  transform: swipeDirection === "left" ? "translateX(-100%) rotate(-12deg)" :
+                             swipeDirection === "right" ? "translateX(100%) rotate(12deg)" :
+                             swipeDirection === "up" ? "translateY(-100%) scale(0.75)" :
+                             "translateX(0) rotate(0)",
+                  opacity: swipeDirection ? 0 : 1,
+                  transition: "all 0.3s ease-out"
+                }}
+                onTouchStart={onTouchStart}
+                onTouchMove={onTouchMove}
+                onTouchEnd={onTouchEnd}
+              >
+                <div className="mb-6 lg:mb-8">
+                  <div
+                    className={`text-${theme.colors.accent} font-semibold text-xs lg:text-sm mb-2`}
+                  >
+                    QUESTION
+                  </div>
+                  <div
+                    className={`text-xl lg:text-2xl xl:text-3xl font-bold text-${theme.colors.text.primary} mb-4 lg:mb-6`}
+                  >
+                    {currentCard.question}
+                  </div>
+                </div>
+
+                <div>
+                  <div
+                    className={`text-${theme.colors.correct} font-semibold text-xs lg:text-sm mb-2`}
+                  >
+                    ANSWER
+                  </div>
+                  <div
+                    className={`text-lg lg:text-xl xl:text-2xl font-medium text-${theme.colors.text.secondary}`}
+                  >
+                    {currentCard.answer}
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-6 flex justify-center gap-4">
+                <button
+                  onClick={() => {
+                    setSwipeDirection("left");
+                    setTimeout(() => handleAnswer("wrong"), 300);
+                  }}
+                  className={`bg-${theme.colors.wrong} hover:bg-${theme.colors.wrong}/80 text-${theme.colors.text.inverse} p-4 rounded-full shadow-lg transition-colors`}
+                  title="Wrong (Left Arrow)"
+                >
+                  <ChevronLeft className="w-8 h-8" />
+                </button>
+                <button
+                  onClick={() => {
+                    setSwipeDirection("up");
+                    setTimeout(() => handleAnswer("void"), 300);
+                  }}
+                  className={`bg-${theme.colors.void} hover:bg-${theme.colors.void}/80 text-${theme.colors.text.inverse} p-4 rounded-full shadow-lg transition-colors`}
+                  title="Void (Up Arrow)"
+                >
+                  <ChevronUp className="w-8 h-8" />
+                </button>
+                <button
+                  onClick={() => {
+                    setSwipeDirection("right");
+                    setTimeout(() => handleAnswer("right"), 300);
+                  }}
+                  className={`bg-${theme.colors.correct} hover:bg-${theme.colors.correct}/80 text-${theme.colors.text.inverse} p-4 rounded-full shadow-lg transition-colors`}
+                  title="Right (Right Arrow)"
+                >
+                  <ChevronRight className="w-8 h-8" />
+                </button>
+              </div>
+
+              <div
+                className={`text-center text-${theme.colors.text.inverse}/80 text-sm mt-4`}
+              >
+                <p className="hidden lg:block">
+                  Use arrow keys or swipe to answer
+                </p>
+                <p className="lg:hidden">
+                  Swipe left (wrong), right (correct), or up (void)
+                </p>
+              </div>
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+      if (screen === "results") {
+        const total = score.right + score.wrong + score.void;
+        const accuracy = total > 0 ? Math.round((score.right / total) * 100) : 0;
+
+        return (
+          <div
+            className={`min-h-screen bg-gradient-to-br from-${theme.colors.primary.from} to-${theme.colors.primary.to} p-4 flex items-center justify-center`}
+            style={{ fontFamily: theme.fontFamily }}
+          >
+            <div
+              className={`bg-${theme.colors.background.card} ${theme.effects.cardRounding} p-8 max-w-md w-full ${theme.effects.cardShadow}`}
+            >
+              <div className="text-center mb-8">
+                <div className="text-6xl mb-4">🎉</div>
+                <h2
+                  className={`text-3xl font-bold text-${theme.colors.text.primary} mb-2`}
+                >
+                  Round Complete!
+                </h2>
+                <p className={`text-${theme.colors.text.secondary}`}>
+                  {selectedDeck.name}
+                </p>
+              </div>
+
+              <div className={`bg-${theme.colors.accent}/10 rounded-xl p-6 mb-6`}>
+                <div className="text-center mb-4">
+                  <div
+                    className={`text-5xl font-bold text-${theme.colors.accent} mb-1`}
+                  >
+                    {accuracy}%
+                  </div>
+                  <div className={`text-${theme.colors.text.secondary} text-sm`}>
+                    Accuracy
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="text-center">
+                    <div
+                      className={`text-3xl font-bold text-${theme.colors.correct}`}
+                    >
+                      {score.right}
+                    </div>
+                    <div className={`text-${theme.colors.text.secondary} text-sm`}>
+                      Correct
+                    </div>
+                  </div>
+                  <div className="text-center">
+                    <div
+                      className={`text-3xl font-bold text-${theme.colors.wrong}`}
+                    >
+                      {score.wrong}
+                    </div>
+                    <div className={`text-${theme.colors.text.secondary} text-sm`}>
+                      Wrong
+                    </div>
+                  </div>
+                  <div className="text-center">
+                    <div className={`text-3xl font-bold text-${theme.colors.void}`}>
+                      {score.void}
+                    </div>
+                    <div className={`text-${theme.colors.text.secondary} text-sm`}>
+                      Void
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <button
+                onClick={finishGame}
+                className={`w-full bg-${theme.colors.accent} hover:bg-${theme.colors.accent}/90 text-${theme.colors.text.inverse} font-bold py-4 px-6 ${theme.effects.buttonRounding} flex items-center justify-center gap-2 transition-colors`}
+              >
+                <RotateCcw className="w-5 h-5" />
+                Back to Decks
+              </button>
+            </div>
+          </div>
+        );
+      }
+
+      return null;
+    }
+
+    // Render the app
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<LightningRound />);
+  </script>
+</body>
+</html>
